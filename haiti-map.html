@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta name="description" content="[LOKAL+ WHERE WE WORK]" />
+    <meta charset=utf-8 />
+    <title>Map Map Map</title>
+    <link href='http://api.tiles.mapbox.com/mapbox.js/v1.6.1/mapbox.css' rel='stylesheet' />
+    <!--[if lte IE 8]>
+      <link href='//api.tiles.mapbox.com/mapbox.js/v1.6.1/mapbox.ie.css' rel='stylesheet'>
+    <![endif]-->
+    <style>
+     body { margin:0; padding:0; }
+     #map { position:absolute; top:0; bottom:0; width:80%; }
+
+     #map-ui {
+       position: absolute;
+       top: 75px;
+       left: 10px;
+       list-style: none;
+       margin: 0;
+       padding: 0;
+       z-index: 100;
+     }
+
+     #map-ui a {
+       font: normal 13px/18px 'Helvetica Neue', Helvetica, sans-serif;
+       background: #FFF;
+       color: #3C4E5A;
+       display: block;
+       margin: 0;
+       padding: 0;
+       border: 1px solid #BBB;
+       border-bottom-width: 0;
+       min-width: 138px;
+       padding: 10px;
+       text-decoration: none;
+     }
+
+     #map-ui a:hover {
+       background: #ECF5FA;
+     }
+
+     #map-ui li:last-child a {
+       border-bottom-width: 1px;
+       -webkit-border-radius: 0 0 3px 3px;
+       border-radius: 0 0 3px 3px;
+     }
+
+     #map-ui li:first-child a {
+       -webkit-border-radius: 3px 3px 0 0;
+       border-radius: 3px 3px 0 0;
+     }
+
+     #map-ui a.active {
+       background: #3887BE;
+       border-color: #3887BE;
+       border-top-color: #FFF;
+       color: #FFF;
+     }
+    </style>
+  </head>
+  <body>
+
+    <ul id='map-ui'></ul>
+    <div id='map'></div>
+
+    <script src='http://api.tiles.mapbox.com/mapbox.js/v1.6.1/mapbox.js'></script>
+    <script type='application/javascript'>
+
+     var ui = document.getElementById('map-ui');
+
+     var layers = [
+       {
+         name: 'Commune Profile',
+         key: 'nickthomas.h2oaeoib',
+         zIndex: 1,
+         active: true // show on document load
+       },
+       {
+         name: 'Municipal Capacity',
+         key: 'nickthomas.h2oa9c7j',
+         zIndex: 2,
+         active: false
+       }
+     ];
+
+     var createLinkElement = function (text) {
+       var link = document.createElement('a');
+       link.href = '#';
+       link.innerHTML = text;
+       return link;
+     };
+
+     var dummyClick = {  // for fake click to toggle layers on load
+       stopPropagation: function () {},
+       preventDefault: function () {}
+     };
+
+     var addLayer = function addLayer(layer) {
+       var gridlayer = L.mapbox.gridLayer(layer.key);
+       var tilelayer = L.mapbox.tileLayer(layer.key);
+
+       tilelayer.on('ready', function () {
+         console.log(layer.name, 'tilelayer ready');
+
+         tilelayer.setZIndex(layer.zIndex);
+         gridlayer.addTo(map);
+
+         // Add the gridControl to the active gridlayer.
+         L.mapbox.gridControl(gridlayer, {follow: false}).addTo(map);
+
+         // Create a simple layer switcher that toggles layer opacity
+         var item = document.createElement('li');
+         var link = createLinkElement(layer.name);
+
+         var toggleLayer = function(event) {
+           event.preventDefault();
+           event.stopPropagation();
+
+           if (map.hasLayer(tilelayer)) {
+             map.removeLayer(tilelayer);
+             map.removeLayer(gridlayer);
+             console.log('removing legend: ', layer.name);
+             map.legendControl.removeLegend(tilelayer.getTileJSON().legend);
+             link.className = '';
+           } else {
+             map.addLayer(tilelayer);
+             map.addLayer(gridlayer);
+             console.log('adding legend: ', layer.name);
+             map.legendControl.addLegend(tilelayer.getTileJSON().legend);
+             link.className = 'active';
+           }
+         };
+         link.addEventListener('click', toggleLayer, false);
+         link.toggleLayer = toggleLayer;
+
+         item.appendChild(link);
+         ui.appendChild(item);
+
+         if (layer.active) {
+           link.toggleLayer(dummyClick);
+         } else {
+           // turn it on and off because we can't figure out how
+           // to turn off the tooltips for inactive layers on load
+           link.toggleLayer(dummyClick);
+           link.toggleLayer(dummyClick);
+         }
+       });
+     };
+
+     var map = L.mapbox.map('map', 'nickthomas.h0p39n5f')
+                       .setView([19.3085, -72.9904], 8);
+
+     addLayer(layers[0]);
+     addLayer(layers[1]);
+
+    </script>
+  </body>
+</html>
