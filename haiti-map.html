@@ -3,7 +3,7 @@
   <head>
     <meta name="description" content="[LOKAL+ WHERE WE WORK]" />
     <meta charset=utf-8 />
-    <title>Map Map Map</title>
+    <title>Haiti LOKAL+ Where We Work</title>
     <link href='http://api.tiles.mapbox.com/mapbox.js/v1.6.1/mapbox.css' rel='stylesheet' />
     <!--[if lte IE 8]>
       <link href='//api.tiles.mapbox.com/mapbox.js/v1.6.1/mapbox.ie.css' rel='stylesheet'>
@@ -60,13 +60,11 @@
     </style>
   </head>
   <body>
-
     <ul id='map-ui'></ul>
     <div id='map'></div>
-
     <script src='http://api.tiles.mapbox.com/mapbox.js/v1.6.1/mapbox.js'></script>
+    <script src="reqwest.js"></script>
     <script type='application/javascript'>
-
      var ui = document.getElementById('map-ui');
 
      var layers = [
@@ -154,6 +152,98 @@
      addLayer(layers[0]);
      addLayer(layers[1]);
 
+     // modified from: https://github.com/lxbarth/osm-dal-talleres/blob/master/mapbox.js/mapbox.converters.googledocs.js
+     // Takes a spreadsheet key, worksheet ID, and callback function with a features argument. Use this to find the worksheet ID:
+     // https://spreadsheets.google.com/feeds/worksheets/[spreadsheet_key]/public/basic?alt=json
+     // Fetches and parses the spreadsheet JSON into a geoJson object and adds it as a feature layer
+     // Note: if you're data isn't changing/being updated in Google docs try exporting it once: https://github.com/mapbox/geo-googledocs
+     var onGoogleDocsSuccess = function onGoogleDocsSuccess(docsJson) {
+       var features = [];
+       var latfield = '';
+       var lonfield = '';
+       var geoJson = {
+	 "features": features,
+	 "type": "FeatureCollection"
+       };
+       if (!docsJson || !docsJson.feed) return geoJson;
+
+       for (var i = 0; i < docsJson.feed.entry.length; i++) {
+         var entry = docsJson.feed.entry[i];
+         var feature = {
+           geometry: {
+             "type": "Point",
+             coordinates: [],
+           },
+           properties: {},
+           "type": "Feature"
+         };
+
+         for (var fieldName in entry) {
+	   if (i === 0) {
+             if (fieldName.match(/\$Lat/i)) latfield = fieldName;
+             if (fieldName.match(/\$Lon/i)) lonfield = fieldName;
+
+	     if (latfield && lonfield) {
+	       console.log("Using fields:", latfield, "and", lonfield, "for lat and long.");
+	     }
+	   }
+
+           if (fieldName === latfield) {
+	     feature.geometry.coordinates[1] = parseFloat(entry[fieldName].$t);
+	   } else if (fieldName === lonfield) {
+	     feature.geometry.coordinates[0] = parseFloat(entry[fieldName].$t);
+	   } else if (fieldName.indexOf('gsx$') === 0) {
+             feature.properties[fieldName.replace('gsx$', '')] = entry[fieldName].$t;
+           }
+         }
+         if (feature.geometry.coordinates.length == 2) {
+	   features.push(feature);
+	 } else {
+	   console.error("No lat long for:", entry);
+	 }
+       }
+
+       console.log("Adding layer with geoJSON", geoJson);
+       var markerLayer = L.mapbox.featureLayer(geoJson)
+				 .addTo(map);
+
+       var offFilter = function () { return false; };
+       var onFilter = function () { return true; };
+
+       // turn it off initially
+       markerLayer.setFilter(offFilter);
+
+       // ahhhh duplicate code
+       var item = document.createElement('li');
+       var link = createLinkElement("Best Map Layer Ever"); // TODO: Rename?
+       var toggleFeatureLayer = function (event) {
+	 if (markerLayer.getFilter() === offFilter) {
+	   markerLayer.setFilter(onFilter);
+	   link.className = 'active';
+	 } else {
+	   markerLayer.setFilter(offFilter);
+	   link.className = '';
+	 }
+       };
+       item.appendChild(link);
+       ui.appendChild(item);
+       link.addEventListener('click', toggleFeatureLayer, false);
+     };
+
+     var docKey = '0AtlnRpNRW2rvdF9Qa3dyX1M1YzJCZy1QaHJSU3VfNkE';
+     // var docKey = '0AjRUP_DVcnWddDJTQVRVWXlsZktZSmxjUVRRRWZ4dXc'; // staging copy for editing to see changes in map
+     var sheetIndex = 'od4';
+
+     var url = 'https://spreadsheets.google.com/feeds/list/' + docKey +
+               '/' + sheetIndex + '/public/values?alt=json-in-script&callback=callback';
+
+     reqwest({
+       url: url,
+       type: 'jsonp',
+       jsonpCallback: 'callback',
+       success: onGoogleDocsSuccess,
+       "error": function () { console.error("Failed to load spreadsheet data."); }
+     });
     </script>
   </body>
 </html>
