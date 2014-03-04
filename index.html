@@ -76,6 +76,12 @@
       </li>
     </ul>
     <div id='map'></div>
+    <template id="marker-popup">
+      <h1 class="caption">Caption: </h1>
+      <h1 class="implementer">Implementer: </h1>
+      <h1 class="outcome">: </h1>
+      <img class="picture" src=""/>
+    </template>
     <script src='http://api.tiles.mapbox.com/mapbox.js/v1.6.1/mapbox.js'></script>
     <script>
 /*! version: 1.0.2
@@ -761,9 +767,12 @@
      addLayer(layers[0]);
      addLayer(layers[1]);
 
-
      var docKey = '0AtlnRpNRW2rvdF9Qa3dyX1M1YzJCZy1QaHJSU3VfNkE';
      // var docKey = '0AjRUP_DVcnWddDJTQVRVWXlsZktZSmxjUVRRRWZ4dXc'; // staging copy for editing to see changes in map
+     var sheetIndex = 'od4';
+
+     var url = 'https://spreadsheets.google.com/feeds/list/' + docKey +
+               '/' + sheetIndex + '/public/values?alt=json-in-script&callback=callback';
 
      // modified from: https://github.com/lxbarth/osm-dal-talleres/blob/master/mapbox.js/mapbox.converters.googledocs.js
      // Takes a spreadsheet key, worksheet ID, and callback function with a features argument. Use this to find the worksheet ID:
@@ -824,7 +833,7 @@
        var onFilter = function () { return true; };
 
        // turn it off initially
-       markerLayer.setFilter(offFilter);
+       // markerLayer.setFilter(offFilter);
 
        // ahhhh duplicate code
        var link = getLinkElement(docKey, "Best Map Layer Ever"); // TODO: Rename?
@@ -838,12 +847,19 @@
 	 }
        };
        link.addEventListener('click', toggleFeatureLayer, false);
+
+       // pop up site info on click
+       var popupEl = document.getElementById('marker-popup');
+       markerLayer.eachLayer(function (layer) {
+	 console.log(layer);
+	 var contentHtml = "<h1>HIIIII</h1>"
+
+	 // popupEl.cloneNode(true);
+	 // debugger;
+	 // console.log(contentHtml);
+	 layer.bindPopup(contentHtml);
+       });
      };
-
-     var sheetIndex = 'od4';
-
-     var url = 'https://spreadsheets.google.com/feeds/list/' + docKey +
-               '/' + sheetIndex + '/public/values?alt=json-in-script&callback=callback';
 
      reqwest({
        url: url,
